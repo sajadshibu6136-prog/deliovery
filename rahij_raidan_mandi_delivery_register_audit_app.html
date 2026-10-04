@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>Rahij Raidan Mandi - Delivery Register & Audit</title>
+  
+  <!-- Universal Web App & PWA Settings for Android + iOS -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Raidan Delivery">
+  <meta name="application-name" content="Raidan Delivery">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#C58917">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#C58917',
+              goldLight: '#FDF6E2',
+              goldDark: '#935F05',
+              surface: '#FFFFFF',
+              surfaceAlt: '#FBF8F3',
+              cardBorder: '#E5DCD1',
+              accent: '#D97706',
+              bgMain: '#F5EFE6'
+            }
+          },
+          fontFamily: {
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+    html, body {
+      min-height: 100%;
+      background-color: #F5EFE6;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      -webkit-tap-highlight-color: transparent;
+      /* Android compatibility: Never use global select-none */
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Ensure Android & iOS inputs are fully selectable and never zoom */
+    input, select, textarea {
+      font-size: 16px !important;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      touch-action: manipulation;
+    }
+
+    button, a, label {
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    /* Custom smooth scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D5C7B7;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans antialiased">
+  
+  <!-- Header Bar -->
+  <header class="bg-white border-b border-brand-cardBorder sticky top-0 z-40 px-4 py-3 shadow-sm">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md text-white shrink-0">
+          <i class="ph-bold ph-cooking-pot text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-black tracking-wide uppercase text-slate-900 leading-tight">
+            RAHIJ RAIDAN MANDI
+          </h1>
+          <p class="text-[11px] text-amber-700 font-semibold flex items-center gap-1.5">
+            <span>Delivery & POS Audit</span>
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="storageStatusBadge" class="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">Sync Active</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation switch -->
+      <div class="flex items-center space-x-1 bg-amber-50 p-1 rounded-xl border border-amber-200 shrink-0">
+        <button type="button" id="navDeliveryBtn" onclick="switchView('delivery')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-amber-600 text-white shadow-sm">
+          <i class="ph-bold ph-moped text-sm mr-1"></i> Delivery
+        </button>
+        <button type="button" id="navAdminBtn" onclick="requestAdminAuth()" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-700 hover:text-slate-950 transition-all">
+          <i class="ph-bold ph-chart-line-up text-sm mr-1"></i> Admin
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast (Android & iOS) -->
+  <div id="toastContainer" class="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-md pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
+    <div id="toastInner" class="rounded-xl px-4 py-3 shadow-2xl flex items-center space-x-3 text-sm font-semibold border">
+      <i id="toastIcon" class="ph-fill text-2xl"></i>
+      <span id="toastMsg" class="flex-1">Notification</span>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-3xl w-full mx-auto p-4 pb-24">
+    
+    <!-- ========================================== -->
+    <!-- VIEW 1: DELIVERY BOY VIEW                  -->
+    <!-- ========================================== -->
+    <section id="viewDeliveryBoy" class="space-y-4">
+      
+      <!-- Date Bar & Lock Status -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+            <i class="ph-bold ph-calendar-check text-xl"></i>
+          </div>
+          <div>
+            <span class="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Active Delivery Date</span>
+            <div id="activeDateDisplay" class="text-sm sm:text-base font-black text-slate-900 tracking-wide">Loading date...</div>
+          </div>
+        </div>
+        <div id="dayLockBadge" class="hidden px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm">
+          <i class="ph-bold ph-lock-key mr-1"></i> Register Closed
+        </div>
+      </div>
+
+      <!-- Main Form -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-5 shadow-sm">
+        <div class="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+          <h2 class="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+            <i class="ph-bold ph-receipt text-amber-600"></i> Record Delivery Bill
+          </h2>
+          <span class="text-xs px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-mono font-bold" id="liveTimeClock">--:--:--</span>
+        </div>
+
+        <form id="deliveryForm" onsubmit="handleDeliverySubmit(event)" class="space-y-4">
+          <!-- 1. Delivery Boy Name -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              1. Delivery Boy Name <span class="text-rose-600">*</span>
+            </label>
+            <div class="grid grid-cols-3 gap-2 mb-2">
+              <button type="button" onclick="setDeliveryBoy('Shihab')" class="py-2.5 text-xs font-bold rounded-xl bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100 active:scale-95 transition">
+                Shihab
+              </button>
+              <button type="button" onclick="setDeliveryBoy('Junaid')" class="py-2.5 text-xs font-bold rounded-xl bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100 active:scale-95 transition">
+                Junaid
+              </button>
+              <button type="button" onclick="setDeliveryBoy('Rasheed')" class="py-2.5 text-xs font-bold rounded-xl bg-amber-50 border border-amber-200 text-amber-900 hover:bg-amber-100 active:scale-95 transition">
+                Rasheed
+              </button>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <i class="ph-bold ph-user text-lg"></i>
+              </span>
+              <input type="text" id="deliveryBoyName" required placeholder="Select above or type name" 
+                     class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3.5 text-slate-900 placeholder-slate-400 font-semibold focus:outline-none focus:bg-white focus:border-amber-600 transition shadow-inner">
+            </div>
+          </div>
+
+          <!-- 2. Invoice / Bill Number -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              2. Invoice / Bill Number <span class="text-rose-600">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400 font-mono text-base font-bold">#</span>
+              <input type="text" id="invoiceNumber" inputmode="text" required placeholder="e.g. 1042 or RD-502"
+                     class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3.5 text-slate-900 placeholder-slate-400 font-black tracking-wider focus:outline-none focus:bg-white focus:border-amber-600 transition shadow-inner uppercase">
+            </div>
+            <p id="invoiceDuplicateWarn" class="hidden text-xs text-rose-600 mt-1 font-bold flex items-center gap-1">
+              <i class="ph-bold ph-warning-circle text-base"></i> This invoice has already been recorded today!
+            </p>
+          </div>
+
+          <!-- 3. Bill Amount -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              3. Bill Amount (₹) <span class="text-rose-600">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-amber-700 text-2xl font-black">₹</span>
+              <input type="number" id="billAmount" step="1" min="1" inputmode="numeric" required placeholder="0.00"
+                     class="w-full bg-slate-50 border-2 border-slate-300 rounded-xl pl-11 pr-4 py-3.5 text-slate-900 text-2xl font-black placeholder-slate-400 focus:outline-none focus:bg-white focus:border-amber-600 transition shadow-inner">
+            </div>
+          </div>
+
+          <!-- 4. Payment Method -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              4. Payment Method <span class="text-rose-600">*</span>
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="Cash" checked class="hidden peer">
+                <div class="p-3 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-50/70 transition flex flex-col items-center">
+                  <i class="ph-bold ph-money text-2xl text-emerald-600 mb-1"></i>
+                  <span class="text-xs sm:text-sm font-bold text-slate-700 peer-checked:text-emerald-800">Cash</span>
+                </div>
+              </label>
+
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="UPI" class="hidden peer">
+                <div class="p-3 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-sky-600 peer-checked:bg-sky-50/70 transition flex flex-col items-center">
+                  <i class="ph-bold ph-qr-code text-2xl text-sky-600 mb-1"></i>
+                  <span class="text-xs sm:text-sm font-bold text-slate-700 peer-checked:text-sky-800">UPI</span>
+                </div>
+              </label>
+
+              <label class="cursor-pointer">
+                <input type="radio" name="paymentMethod" value="Credit" class="hidden peer">
+                <div class="p-3 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-amber-600 peer-checked:bg-amber-50/70 transition flex flex-col items-center">
+                  <i class="ph-bold ph-notebook text-2xl text-amber-600 mb-1"></i>
+                  <span class="text-xs sm:text-sm font-bold text-slate-700 peer-checked:text-amber-900">Credit</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 5. Delivery Status -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              5. Delivery Status <span class="text-rose-600">*</span>
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="deliveryStatus" value="Delivered" checked class="hidden peer" onchange="handleStatusChange('Delivered')">
+                <div class="py-2.5 px-2 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-emerald-600 peer-checked:bg-emerald-50 transition">
+                  <span class="text-xs font-black text-slate-700 peer-checked:text-emerald-800 flex items-center justify-center gap-1">
+                    <i class="ph-bold ph-check-circle"></i> Delivered
+                  </span>
+                </div>
+              </label>
+
+              <label class="cursor-pointer">
+                <input type="radio" name="deliveryStatus" value="Cancelled" class="hidden peer" onchange="handleStatusChange('Cancelled')">
+                <div class="py-2.5 px-2 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-rose-600 peer-checked:bg-rose-50 transition">
+                  <span class="text-xs font-black text-slate-700 peer-checked:text-rose-800 flex items-center justify-center gap-1">
+                    <i class="ph-bold ph-x-circle"></i> Cancelled
+                  </span>
+                </div>
+              </label>
+
+              <label class="cursor-pointer">
+                <input type="radio" name="deliveryStatus" value="Returned" class="hidden peer" onchange="handleStatusChange('Returned')">
+                <div class="py-2.5 px-2 text-center rounded-xl bg-slate-50 border-2 border-slate-200 peer-checked:border-amber-600 peer-checked:bg-amber-50 transition">
+                  <span class="text-xs font-black text-slate-700 peer-checked:text-amber-900 flex items-center justify-center gap-1">
+                    <i class="ph-bold ph-arrow-u-down-left"></i> Returned
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 6. Optional Remarks -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+              6. Optional Remarks / Note
+            </label>
+            <input type="text" id="deliveryRemarks" placeholder="e.g. Extra Mandi sauce, delayed customer handover"
+                   class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-amber-600 transition">
+          </div>
+
+          <!-- Save Button -->
+          <div class="pt-2">
+            <button type="submit" id="saveDeliveryBtn"
+                    class="w-full min-h-[54px] py-4 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:bg-amber-700 text-white font-black text-base sm:text-lg shadow-lg shadow-amber-500/25 flex items-center justify-center space-x-2 active:scale-[0.98] transition">
+              <i class="ph-bold ph-floppy-disk text-2xl"></i>
+              <span>SAVE DELIVERY</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Recent list -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs sm:text-sm font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+            <i class="ph-bold ph-clock-counter-clockwise text-amber-600 text-base"></i> Submitted Deliveries Today
+          </h3>
+          <span id="boyBillsCountBadge" class="text-xs font-black px-2.5 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-amber-900">0 bills</span>
+        </div>
+        <div id="recentDeliveriesList" class="space-y-2 text-sm">
+          <p class="text-slate-400 text-center py-4 text-xs italic font-medium">No deliveries recorded yet today.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: ACCOUNTANT / ADMIN DASHBOARD       -->
+    <!-- ========================================== -->
+    <section id="viewAdminDashboard" class="hidden space-y-5">
+      
+      <!-- Admin Header Control -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <span class="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
+            <i class="ph-bold ph-shield-check"></i> Audit Control Room
+          </span>
+          <h2 class="text-base sm:text-lg font-black text-slate-900">Daily Reconciliation Register</h2>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input type="date" id="adminDateSelector" onchange="changeAdminDate(this.value)"
+                 class="bg-slate-50 border border-slate-300 text-slate-900 text-xs sm:text-sm font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600 w-full sm:w-auto">
+          <button type="button" onclick="changeAdminDate(getTodayISOString())" class="px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-black text-amber-900 hover:bg-amber-100 shrink-0">
+            Today
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white border border-brand-cardBorder rounded-2xl p-3.5 shadow-sm">
+          <span class="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Total Delivery Sales</span>
+          <div id="kpiTotalSales" class="text-xl sm:text-2xl font-black text-amber-700">₹0</div>
+          <span id="kpiTotalBills" class="text-[11px] text-slate-500 font-medium">0 delivery bills</span>
+        </div>
+
+        <div class="bg-white border border-brand-cardBorder rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-[11px] font-bold text-emerald-700 uppercase tracking-wider block mb-1">Cash In Hand</span>
+            <i class="ph-bold ph-money text-emerald-600 text-lg"></i>
+          </div>
+          <div id="kpiCashSales" class="text-xl sm:text-2xl font-black text-slate-900">₹0</div>
+          <span id="kpiCashCount" class="text-[11px] text-slate-500 font-medium">0 bills</span>
+        </div>
+
+        <div class="bg-white border border-brand-cardBorder rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-[11px] font-bold text-sky-700 uppercase tracking-wider block mb-1">UPI Online</span>
+            <i class="ph-bold ph-qr-code text-sky-600 text-lg"></i>
+          </div>
+          <div id="kpiUpiSales" class="text-xl sm:text-2xl font-black text-slate-900">₹0</div>
+          <span id="kpiUpiCount" class="text-[11px] text-slate-500 font-medium">0 bills</span>
+        </div>
+
+        <div class="bg-white border border-brand-cardBorder rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-1">Credit / Ledger</span>
+            <i class="ph-bold ph-notebook text-amber-600 text-lg"></i>
+          </div>
+          <div id="kpiCreditSales" class="text-xl sm:text-2xl font-black text-slate-900">₹0</div>
+          <span id="kpiCreditCount" class="text-[11px] text-slate-500 font-medium">0 bills</span>
+        </div>
+      </div>
+
+      <!-- Secondary status counts -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
+          <span class="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">Delivered</span>
+          <p id="kpiDeliveredCount" class="text-base font-black text-emerald-700">0</p>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center">
+          <span class="text-[10px] text-rose-800 font-bold uppercase tracking-wider">Cancelled</span>
+          <p id="kpiCancelledCount" class="text-base font-black text-rose-700">0</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
+          <span class="text-[10px] text-amber-900 font-bold uppercase tracking-wider">Returned</span>
+          <p id="kpiReturnedCount" class="text-base font-black text-amber-800">0</p>
+        </div>
+      </div>
+
+      <!-- POS Reconciliation Box -->
+      <div class="bg-white border-2 border-amber-300 rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 font-bold">
+              <i class="ph-bold ph-scales text-lg"></i>
+            </div>
+            <h3 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wider">POS Delivery Reconciliation</h3>
+          </div>
+          <span class="text-xs font-semibold text-slate-500">End-Of-Day Audit</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Enter Today's POS Delivery Sales (₹)
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-amber-700 font-bold text-lg">₹</span>
+              <input type="number" id="posSalesInput" oninput="calculateReconciliation()" step="1" min="0" placeholder="e.g. 43200"
+                     class="w-full bg-slate-50 border-2 border-slate-300 focus:border-amber-600 rounded-xl pl-9 pr-4 py-3 text-xl font-black text-slate-900 focus:outline-none transition">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Total recorded by restaurant billing computer / POS machine.</p>
+          </div>
+
+          <div id="reconciliationResultBox" class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+            <span class="text-[10px] uppercase tracking-wider font-bold text-slate-500 block mb-1">Audit Status & Variance</span>
+            <div id="reconBadge" class="inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-slate-200 text-slate-700 mb-1">
+              ENTER POS SALES
+            </div>
+            <div id="reconDifferenceText" class="text-sm font-bold text-slate-700">
+              Difference: ₹0
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1" id="reconFormula">
+              Register (₹0) vs POS (₹0)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery-Boy-Wise Summary Table -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-4 shadow-sm">
+        <h3 class="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="ph-bold ph-users-three text-amber-600"></i> Delivery-Boy-Wise Summary
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-500 font-bold uppercase bg-slate-50">
+                <th class="py-2.5 px-3">Delivery Boy</th>
+                <th class="py-2.5 px-2 text-center">Bills</th>
+                <th class="py-2.5 px-2 text-right">Cash</th>
+                <th class="py-2.5 px-2 text-right">UPI</th>
+                <th class="py-2.5 px-2 text-right">Credit</th>
+                <th class="py-2.5 px-3 text-right">Total Sales</th>
+              </tr>
+            </thead>
+            <tbody id="deliveryBoySummaryBody" class="divide-y divide-slate-100 font-medium">
+              <tr>
+                <td colspan="6" class="text-center py-4 text-slate-400 italic">No bills found for this date.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detailed Invoices Table with CSV Controls -->
+      <div class="bg-white border border-brand-cardBorder rounded-2xl p-4 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <h3 class="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <i class="ph-bold ph-list-numbers text-amber-600"></i> Invoice Audit Register
+          </h3>
+
+          <!-- Robust Export Buttons with Fallbacks -->
+          <div class="flex items-center flex-wrap gap-1.5">
+            <button type="button" onclick="downloadCSVReport()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition">
+              <i class="ph-bold ph-download-simple text-base"></i> Download CSV
+            </button>
+            <button type="button" onclick="copyCSVToClipboard()" class="px-3 py-2 bg-slate-100 border border-slate-300 hover:border-amber-600 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1.5 transition">
+              <i class="ph-bold ph-copy text-sm text-amber-700"></i> Copy CSV
+            </button>
+            <button type="button" onclick="openCSVPreviewModal()" class="px-2.5 py-2 bg-slate-100 border border-slate-300 hover:border-amber-600 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1" title="View CSV Content">
+              <i class="ph-bold ph-file-text text-sm"></i> View
+            </button>
+            <button type="button" onclick="shareWhatsAppSummary()" class="px-3 py-2 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-1.5 transition">
+              <i class="ph-bold ph-whatsapp-logo text-emerald-600 text-base"></i> WhatsApp
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 pointer-events-none">
+              <i class="ph-bold ph-magnifying-glass"></i>
+            </span>
+            <input type="text" id="filterSearch" oninput="applyFilters()" placeholder="Search Invoice or Boy..."
+                   class="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-600">
+          </div>
+          <select id="filterPayment" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none focus:border-amber-600">
+            <option value="ALL">All Payment Methods</option>
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="Credit">Credit</option>
+          </select>
+          <select id="filterStatus" onchange="applyFilters()" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-medium focus:outline-none focus:border-amber-600">
+            <option value="ALL">All Delivery Statuses</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Returned">Returned</option>
+          </select>
+        </div>
+
+        <!-- Records Table -->
+        <div class="overflow-x-auto max-h-96 overflow-y-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="sticky top-0 bg-slate-100 text-slate-700 font-bold uppercase shadow-sm">
+              <tr class="border-b border-slate-200">
+                <th class="py-2.5 px-3">Time</th>
+                <th class="py-2.5 px-3">Inv #</th>
+                <th class="py-2.5 px-3">Delivery Boy</th>
+                <th class="py-2.5 px-3 text-right">Amount</th>
+                <th class="py-2.5 px-3 text-center">Payment</th>
+                <th class="py-2.5 px-3 text-center">Status</th>
+                <th class="py-2.5 px-3">Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody" class="divide-y divide-slate-100 font-medium">
+              <tr>
+                <td colspan="7" class="text-center py-6 text-slate-400 italic">No delivery records.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Close Day Section -->
+      <div class="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 class="text-sm font-black text-rose-800 uppercase tracking-wider flex items-center gap-2">
+              <i class="ph-bold ph-lock-key text-rose-600"></i> Daily Closing & Lock System
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Closing the day locks today's register to prevent any unauthorized modification by delivery boys.
+            </p>
+          </div>
+          <button type="button" id="closeDayBtn" onclick="toggleCloseDay()" class="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-sm active:scale-95 transition">
+            Close Day & Lock
+          </button>
+        </div>
+
+        <div id="closingSummarySlip" class="hidden mt-4 bg-slate-50 p-4 rounded-xl border border-slate-300 font-mono text-xs text-slate-800 space-y-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- CSV Preview / Fallback Modal -->
+  <div id="csvPreviewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white border border-slate-300 max-w-xl w-full rounded-2xl p-5 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+          <i class="ph-bold ph-file-csv text-amber-600 text-lg"></i> CSV Export Preview
+        </h3>
+        <button type="button" onclick="closeCSVPreviewModal()" class="text-slate-400 hover:text-slate-700 p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="py-3 flex-1 overflow-hidden flex flex-col">
+        <p class="text-[11px] text-slate-500 mb-2">
+          Copy the CSV text below directly to paste into Excel, WhatsApp, or Google Sheets:
+        </p>
+        <textarea id="csvPreviewTextArea" readonly class="w-full flex-1 bg-slate-50 font-mono text-[11px] text-slate-800 p-3 rounded-xl border border-slate-300 focus:outline-none resize-none"></textarea>
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button type="button" onclick="copyCSVToClipboard()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition flex items-center gap-1.5">
+          <i class="ph-bold ph-copy"></i> Copy to Clipboard
+        </button>
+        <button type="button" onclick="closeCSVPreviewModal()" class="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-200">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secure Admin PIN Modal (Strictly PIN 7034, No Hint Displayed) -->
+  <div id="adminPinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white border border-slate-200 max-w-sm w-full rounded-2xl p-6 shadow-2xl">
+      <div class="text-center mb-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-amber-700 mb-2">
+          <i class="ph-bold ph-lock-key text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-black text-slate-900">Accountant Security PIN</h3>
+        <p class="text-xs text-slate-500">Enter authorization PIN to access management dashboard</p>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Secure PIN input: Clean dots with no hint -->
+        <input type="password" id="adminPinInput" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="off"
+               class="w-full text-center bg-slate-50 border-2 border-slate-300 focus:border-amber-600 text-3xl font-black tracking-widest text-slate-900 rounded-xl py-3 focus:outline-none transition">
+        
+        <p id="pinErrorMsg" class="hidden text-xs text-center text-rose-600 font-bold">
+          Incorrect PIN. Please try again.
+        </p>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <button type="button" onclick="closeAdminPinModal()" class="py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 hover:bg-slate-200">
+            Cancel
+          </button>
+          <button type="button" onclick="verifyAdminPin()" class="py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-sm active:scale-95 transition">
+            Unlock
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Universal App State
+    window.appState = {
+      currentDate: '',
+      selectedAdminDate: '',
+      isDayClosed: false,
+      allDeliveries: [],
+      posSales: 0,
+      adminPin: '7034',
+      isAdminUnlocked: false
+    };
+
+    function getTodayISOString() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    const todayStr = getTodayISOString();
+    window.appState.currentDate = todayStr;
+    window.appState.selectedAdminDate = todayStr;
+
+    // ========================================================
+    // INDEXEDDB + LOCALSTORAGE DUAL ENGINE FOR ANDROID & IOS
+    // Guarantees persistence even if Android Webview drops tabs
+    // ========================================================
+    const DB_NAME = 'RahijRaidanMandi_DB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'daily_registers';
+    let idbInstance = null;
+
+    function openIndexedDB() {
+      return new Promise((resolve) => {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
+        }
+        try {
+          const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              db.createObjectStore(STORE_NAME, { keyPath: 'date' });
+            }
+          };
+          request.onsuccess = (event) => {
+            idbInstance = event.target.result;
+            resolve(idbInstance);
+          };
+          request.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    async function persistToStorage(dateKey, payload) {
+      // 1. Synchronous localStorage write
+      try {
+        localStorage.setItem(`raidan_mandi_${dateKey}`, JSON.stringify(payload));
+        let savedDates = JSON.parse(localStorage.getItem('raidan_saved_dates') || '[]');
+        if (!savedDates.includes(dateKey)) {
+          savedDates.push(dateKey);
+          localStorage.setItem('raidan_saved_dates', JSON.stringify(savedDates));
+        }
+      } catch (e) {
+        console.warn("localStorage write:", e);
+      }
+
+      // 2. Asynchronous IndexedDB write (Android-safe)
+      if (idbInstance) {
+        try {
+          const tx = idbInstance.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.put({ date: dateKey, ...payload });
+        } catch (err) {
+          console.warn("IndexedDB write:", err);
+        }
+      }
+    }
+
+    async function loadFromStorage(dateKey) {
+      let data = null;
+      // Try localStorage first
+      try {
+        const raw = localStorage.getItem(`raidan_mandi_${dateKey}`);
+        if (raw) {
+          data = JSON.parse(raw);
+        }
+      } catch (e) {}
+
+      // If missing from localStorage, check IndexedDB
+      if (!data && idbInstance) {
+        try {
+          data = await new Promise((resolve) => {
+            const tx = idbInstance.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.get(dateKey);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+          });
+        } catch (e) {}
+      }
+
+      if (data) {
+        window.appState.allDeliveries = Array.isArray(data.deliveries) ? data.deliveries : [];
+        window.appState.isDayClosed = !!data.isClosed;
+        window.appState.posSales = Number(data.posSales || 0);
+        const posEl = document.getElementById('posSalesInput');
+        if (posEl) posEl.value = data.posSales || '';
+      } else {
+        window.appState.allDeliveries = [];
+        window.appState.isDayClosed = false;
+        window.appState.posSales = 0;
+        const posEl = document.getElementById('posSalesInput');
+        if (posEl) posEl.value = '';
+      }
+
+      renderUI();
+    }
+
+    let audioCtx = null;
+    function playBeep(type = 'success') {
+      // Android Haptic Vibration
+      if (navigator.vibrate) {
+        if (type === 'success') {
+          navigator.vibrate(40);
+        } else {
+          navigator.vibrate([60, 50, 60]);
+        }
+      }
+
+      // Web Audio API
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (!audioCtx) audioCtx = new AudioContextClass();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (type === 'success') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.setValueAtTime(160, now + 0.1);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        }
+      } catch (e) {}
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const inner = document.getElementById('toastInner');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+
+      msg.textContent = message;
+
+      if (type === 'success') {
+        inner.className = 'rounded-xl px-4 py-3 shadow-2xl flex items-center space-x-3 text-sm font-semibold border bg-emerald-50 border-emerald-300 text-emerald-900';
+        icon.className = 'ph-fill ph-check-circle text-2xl text-emerald-600';
+      } else if (type === 'warning') {
+        inner.className = 'rounded-xl px-4 py-3 shadow-2xl flex items-center space-x-3 text-sm font-semibold border bg-amber-50 border-amber-300 text-amber-900';
+        icon.className = 'ph-fill ph-warning text-2xl text-amber-600';
+      } else {
+        inner.className = 'rounded-xl px-4 py-3 shadow-2xl flex items-center space-x-3 text-sm font-semibold border bg-rose-50 border-rose-300 text-rose-900';
+        icon.className = 'ph-fill ph-x-circle text-2xl text-rose-600';
+      }
+
+      container.classList.remove('opacity-0', 'translate-y-[-10px]');
+      container.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        container.classList.add('opacity-0', 'translate-y-[-10px]');
+        container.classList.remove('opacity-100', 'translate-y-0');
+      }, 3500);
+    }
+
+    function setDeliveryBoy(name) {
+      const input = document.getElementById('deliveryBoyName');
+      input.value = name;
+      updateRecentDeliveriesList();
+    }
+
+    function handleStatusChange(status) {
+      const remarksInput = document.getElementById('deliveryRemarks');
+      if (status === 'Cancelled' && !remarksInput.value) {
+        remarksInput.placeholder = "Specify reason for cancellation";
+      } else if (status === 'Returned' && !remarksInput.value) {
+        remarksInput.placeholder = "Specify return reason (e.g. wrong address)";
+      } else {
+        remarksInput.placeholder = "e.g. Extra Mandi sauce, delayed customer handover";
+      }
+    }
+
+    async function handleDeliverySubmit(event) {
+      event.preventDefault();
+
+      if (window.appState.isDayClosed) {
+        playBeep('error');
+        showToast("Today's register has been CLOSED by accountant. Cannot add new bills.", 'error');
+        return;
+      }
+
+      const boyName = document.getElementById('deliveryBoyName').value.trim();
+      const invoiceNo = document.getElementById('invoiceNumber').value.trim().toUpperCase();
+      const amount = parseFloat(document.getElementById('billAmount').value);
+      const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'Cash';
+      const status = document.querySelector('input[name="deliveryStatus"]:checked')?.value || 'Delivered';
+      const remarks = document.getElementById('deliveryRemarks').value.trim();
+
+      if (!boyName || !invoiceNo || isNaN(amount) || amount <= 0) {
+        playBeep('error');
+        showToast("Please provide Delivery Boy, Invoice # and a valid Amount.", 'warning');
+        return;
+      }
+
+      // Check duplicate invoice for current date
+      const existing = window.appState.allDeliveries.find(
+        d => d.invoiceNo.toUpperCase() === invoiceNo
+      );
+
+      if (existing) {
+        playBeep('error');
+        document.getElementById('invoiceDuplicateWarn').classList.remove('hidden');
+        showToast(`This invoice has already been recorded today by ${existing.boyName}.`, 'error');
+        return;
+      } else {
+        document.getElementById('invoiceDuplicateWarn').classList.add('hidden');
+      }
+
+      const saveBtn = document.getElementById('saveDeliveryBtn');
+      saveBtn.disabled = true;
+      saveBtn.classList.add('opacity-50');
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
+      const newRecord = {
+        id: 'bill_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        date: window.appState.currentDate,
+        time: timeStr,
+        timestamp: now.getTime(),
+        boyName: boyName,
+        invoiceNo: invoiceNo,
+        amount: amount,
+        paymentMethod: paymentMethod,
+        status: status,
+        remarks: remarks || '-'
+      };
+
+      window.appState.allDeliveries.unshift(newRecord);
+
+      // Persist permanently
+      const dateKey = window.appState.selectedAdminDate || window.appState.currentDate;
+      await persistToStorage(dateKey, {
+        date: dateKey,
+        deliveries: window.appState.allDeliveries,
+        isClosed: window.appState.isDayClosed,
+        posSales: window.appState.posSales,
+        lastUpdated: new Date().toISOString()
+      });
+
+      playBeep('success');
+      showToast("Delivery saved successfully.", 'success');
+
+      // Clear invoice and amount fields for next delivery
+      document.getElementById('invoiceNumber').value = '';
+      document.getElementById('billAmount').value = '';
+      document.getElementById('deliveryRemarks').value = '';
+
+      const defaultCash = document.querySelector('input[name="paymentMethod"][value="Cash"]');
+      if (defaultCash) defaultCash.checked = true;
+      const defaultDelivered = document.querySelector('input[name="deliveryStatus"][value="Delivered"]');
+      if (defaultDelivered) defaultDelivered.checked = true;
+
+      saveBtn.disabled = false;
+      saveBtn.classList.remove('opacity-50');
+
+      renderUI();
+    }
+
+    function renderUI() {
+      const activeDate = window.appState.currentDate;
+      const dateParts = activeDate.split('-');
+      if (dateParts.length === 3) {
+        const dObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
+        document.getElementById('activeDateDisplay').textContent = dObj.toLocaleDateString('en-IN', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+      }
+
+      const lockBadge = document.getElementById('dayLockBadge');
+      const closeBtn = document.getElementById('closeDayBtn');
+      if (window.appState.isDayClosed) {
+        lockBadge.classList.remove('hidden');
+        closeBtn.textContent = "Day is Closed (Click to Re-open)";
+        closeBtn.className = "px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm active:scale-95 transition";
+      } else {
+        lockBadge.classList.add('hidden');
+        closeBtn.textContent = "Close Day & Lock";
+        closeBtn.className = "px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white shadow-sm active:scale-95 transition";
+      }
+
+      updateRecentDeliveriesList();
+      renderAdminDashboard();
+    }
+
+    function updateRecentDeliveriesList() {
+      const currentBoy = (document.getElementById('deliveryBoyName').value || '').trim();
+      const listContainer = document.getElementById('recentDeliveriesList');
+      const countBadge = document.getElementById('boyBillsCountBadge');
+
+      const deliveries = window.appState.allDeliveries;
+      const filtered = currentBoy 
+        ? deliveries.filter(d => d.boyName.toLowerCase() === currentBoy.toLowerCase())
+        : deliveries;
+
+      countBadge.textContent = `${filtered.length} bills`;
+
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `<p class="text-slate-400 text-center py-4 text-xs italic font-medium">No deliveries recorded yet${currentBoy ? ' for ' + currentBoy : ''}.</p>`;
+        return;
+      }
+
+      listContainer.innerHTML = filtered.slice(0, 5).map(item => `
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="w-8 h-8 rounded-lg ${
+              item.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
+              item.status === 'Cancelled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+            } flex items-center justify-center font-bold text-xs shrink-0">
+              <i class="ph-bold ${
+                item.status === 'Delivered' ? 'ph-check' :
+                item.status === 'Cancelled' ? 'ph-x' : 'ph-arrow-u-down-left'
+              }"></i>
+            </span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-black text-slate-900 text-sm">#${item.invoiceNo}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                  item.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800' :
+                  item.paymentMethod === 'UPI' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-900'
+                }">${item.paymentMethod}</span>
+              </div>
+              <p class="text-[11px] text-slate-500 font-medium">${item.boyName} &bull; ${item.time}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-black text-sm sm:text-base text-amber-700">₹${item.amount.toLocaleString('en-IN')}</span>
+            <p class="text-[10px] text-slate-500 font-semibold">${item.status}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAdminDashboard() {
+      const deliveries = window.appState.allDeliveries;
+
+      let totalSales = 0;
+      let totalBills = deliveries.length;
+      let cashSales = 0, cashCount = 0;
+      let upiSales = 0, upiCount = 0;
+      let creditSales = 0, creditCount = 0;
+      let deliveredCount = 0, cancelledCount = 0, returnedCount = 0;
+
+      const boyMap = {};
+
+      deliveries.forEach(d => {
+        if (d.status === 'Delivered') {
+          totalSales += d.amount;
+          if (d.paymentMethod === 'Cash') {
+            cashSales += d.amount;
+            cashCount++;
+          } else if (d.paymentMethod === 'UPI') {
+            upiSales += d.amount;
+            upiCount++;
+          } else if (d.paymentMethod === 'Credit') {
+            creditSales += d.amount;
+            creditCount++;
+          }
+          deliveredCount++;
+        } else if (d.status === 'Cancelled') {
+          cancelledCount++;
+        } else if (d.status === 'Returned') {
+          returnedCount++;
+        }
+
+        if (!boyMap[d.boyName]) {
+          boyMap[d.boyName] = {
+            name: d.boyName,
+            totalBills: 0,
+            deliveredSales: 0,
+            cash: 0,
+            upi: 0,
+            credit: 0
+          };
+        }
+        boyMap[d.boyName].totalBills++;
+        if (d.status === 'Delivered') {
+          boyMap[d.boyName].deliveredSales += d.amount;
+          if (d.paymentMethod === 'Cash') boyMap[d.boyName].cash += d.amount;
+          if (d.paymentMethod === 'UPI') boyMap[d.boyName].upi += d.amount;
+          if (d.paymentMethod === 'Credit') boyMap[d.boyName].credit += d.amount;
+        }
+      });
+
+      document.getElementById('kpiTotalSales').textContent = `₹${totalSales.toLocaleString('en-IN')}`;
+      document.getElementById('kpiTotalBills').textContent = `${totalBills} delivery bills recorded`;
+
+      document.getElementById('kpiCashSales').textContent = `₹${cashSales.toLocaleString('en-IN')}`;
+      document.getElementById('kpiCashCount').textContent = `${cashCount} bills`;
+
+      document.getElementById('kpiUpiSales').textContent = `₹${upiSales.toLocaleString('en-IN')}`;
+      document.getElementById('kpiUpiCount').textContent = `${upiCount} bills`;
+
+      document.getElementById('kpiCreditSales').textContent = `₹${creditSales.toLocaleString('en-IN')}`;
+      document.getElementById('kpiCreditCount').textContent = `${creditCount} bills`;
+
+      document.getElementById('kpiDeliveredCount').textContent = deliveredCount;
+      document.getElementById('kpiCancelledCount').textContent = cancelledCount;
+      document.getElementById('kpiReturnedCount').textContent = returnedCount;
+
+      const boyTableBody = document.getElementById('deliveryBoySummaryBody');
+      const boysList = Object.values(boyMap);
+
+      if (boysList.length === 0) {
+        boyTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400 italic">No bills found for this date.</td></tr>`;
+      } else {
+        boyTableBody.innerHTML = boysList.map(b => `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-bold text-slate-900">${b.name}</td>
+            <td class="py-2.5 px-2 text-center font-bold text-amber-800">${b.totalBills}</td>
+            <td class="py-2.5 px-2 text-right text-emerald-700 font-semibold">₹${b.cash.toLocaleString('en-IN')}</td>
+            <td class="py-2.5 px-2 text-right text-sky-700 font-semibold">₹${b.upi.toLocaleString('en-IN')}</td>
+            <td class="py-2.5 px-2 text-right text-amber-800 font-semibold">₹${b.credit.toLocaleString('en-IN')}</td>
+            <td class="py-2.5 px-3 text-right font-black text-amber-700">₹${b.deliveredSales.toLocaleString('en-IN')}</td>
+          </tr>
+        `).join('');
+      }
+
+      calculateReconciliation();
+      applyFilters();
+      renderClosingSlip(totalSales, totalBills, cashSales, upiSales, creditSales, cancelledCount, returnedCount);
+    }
+
+    function calculateReconciliation() {
+      const posInput = document.getElementById('posSalesInput');
+      const posValue = parseFloat(posInput.value) || 0;
+      window.appState.posSales = posValue;
+
+      const registerTotal = window.appState.allDeliveries
+        .filter(d => d.status === 'Delivered')
+        .reduce((sum, d) => sum + d.amount, 0);
+
+      const badge = document.getElementById('reconBadge');
+      const diffText = document.getElementById('reconDifferenceText');
+      const formulaText = document.getElementById('reconFormula');
+
+      formulaText.textContent = `Delivery Register (₹${registerTotal.toLocaleString('en-IN')}) vs POS Sales (₹${posValue.toLocaleString('en-IN')})`;
+
+      if (!posInput.value) {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-slate-200 text-slate-700 mb-1";
+        badge.textContent = "ENTER POS SALES";
+        diffText.textContent = "Difference: ₹0";
+        diffText.className = "text-sm font-bold text-slate-700";
+        return;
+      }
+
+      const difference = registerTotal - posValue;
+
+      if (difference === 0) {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 border border-emerald-300 text-emerald-800 mb-1";
+        badge.innerHTML = `<i class="ph-bold ph-check"></i> PERFECT MATCH`;
+        diffText.textContent = "Difference: ₹0 (No discrepancy)";
+        diffText.className = "text-sm sm:text-base font-black text-emerald-700";
+      } else if (difference < 0) {
+        const shortage = Math.abs(difference);
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-100 border border-rose-300 text-rose-800 mb-1";
+        badge.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> SHORTAGE DETECTED`;
+        diffText.textContent = `₹${shortage.toLocaleString('en-IN')} SHORTAGE (Missing bills/cash)`;
+        diffText.className = "text-sm sm:text-base font-black text-rose-700";
+      } else {
+        badge.className = "inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-100 border border-sky-300 text-sky-800 mb-1";
+        badge.innerHTML = `<i class="ph-bold ph-trend-up"></i> EXCESS`;
+        diffText.textContent = `₹${difference.toLocaleString('en-IN')} EXCESS`;
+        diffText.className = "text-sm sm:text-base font-black text-sky-700";
+      }
+
+      // Persist POS input
+      const dateKey = window.appState.selectedAdminDate || window.appState.currentDate;
+      clearTimeout(window._posDebounce);
+      window._posDebounce = setTimeout(() => {
+        persistToStorage(dateKey, {
+          date: dateKey,
+          deliveries: window.appState.allDeliveries,
+          isClosed: window.appState.isDayClosed,
+          posSales: posValue,
+          lastUpdated: new Date().toISOString()
+        });
+      }, 1000);
+    }
+
+    function applyFilters() {
+      const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+      const paymentFilter = document.getElementById('filterPayment').value;
+      const statusFilter = document.getElementById('filterStatus').value;
+
+      const filtered = window.appState.allDeliveries.filter(item => {
+        const matchSearch = !search || 
+          item.invoiceNo.toLowerCase().includes(search) || 
+          item.boyName.toLowerCase().includes(search) ||
+          (item.remarks && item.remarks.toLowerCase().includes(search));
+
+        const matchPayment = paymentFilter === 'ALL' || item.paymentMethod === paymentFilter;
+        const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+
+        return matchSearch && matchPayment && matchStatus;
+      });
+
+      const auditBody = document.getElementById('auditTableBody');
+      if (filtered.length === 0) {
+        auditBody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400 italic">No matching delivery records.</td></tr>`;
+        return;
+      }
+
+      auditBody.innerHTML = filtered.map(item => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500 font-semibold">${item.time}</td>
+          <td class="py-2.5 px-3 font-black text-slate-900">#${item.invoiceNo}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${item.boyName}</td>
+          <td class="py-2.5 px-3 text-right font-black text-amber-700">₹${item.amount.toLocaleString('en-IN')}</td>
+          <td class="py-2.5 px-3 text-center">
+            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+              item.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+              item.paymentMethod === 'UPI' ? 'bg-sky-100 text-sky-800 border border-sky-200' : 'bg-amber-100 text-amber-900 border border-amber-200'
+            }">${item.paymentMethod}</span>
+          </td>
+          <td class="py-2.5 px-3 text-center">
+            <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+              item.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
+              item.status === 'Cancelled' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-900'
+            }">${item.status}</span>
+          </td>
+          <td class="py-2.5 px-3 text-slate-600 max-w-[150px] truncate font-medium" title="${item.remarks}">${item.remarks}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function toggleCloseDay() {
+      window.appState.isDayClosed = !window.appState.isDayClosed;
+      const dateKey = window.appState.selectedAdminDate || window.appState.currentDate;
+      await persistToStorage(dateKey, {
+        date: dateKey,
+        deliveries: window.appState.allDeliveries,
+        isClosed: window.appState.isDayClosed,
+        posSales: window.appState.posSales,
+        lastUpdated: new Date().toISOString()
+      });
+      playBeep(window.appState.isDayClosed ? 'error' : 'success');
+      showToast(window.appState.isDayClosed ? "Day CLOSED. Delivery boys locked from modifying." : "Day RE-OPENED for modifications.", 'warning');
+      renderUI();
+    }
+
+    function renderClosingSlip(totalSales, totalBills, cash, upi, credit, cancelled, returned) {
+      const slipContainer = document.getElementById('closingSummarySlip');
+      const posVal = window.appState.posSales || 0;
+      const diff = totalSales - posVal;
+      let statusStr = "MATCH";
+      if (diff < 0) statusStr = `SHORTAGE (₹${Math.abs(diff)})`;
+      else if (diff > 0) statusStr = `EXCESS (₹${diff})`;
+
+      slipContainer.innerHTML = `
+        <div class="border-b border-slate-300 pb-2 mb-2 font-bold text-amber-800 text-center text-sm">
+          *** RAHIJ RAIDAN MANDI RESTAURANT ***<br>
+          DAILY DELIVERY CLOSING AUDIT SLIP
+        </div>
+        <div class="grid grid-cols-2 gap-y-1">
+          <span class="font-bold text-slate-600">DATE:</span><span class="text-right font-black text-slate-900">${window.appState.selectedAdminDate}</span>
+          <span>Total Delivery Bills:</span><span class="text-right font-black text-slate-900">${totalBills}</span>
+          <span>Delivered Sales:</span><span class="text-right font-black text-amber-700">₹${totalSales.toLocaleString('en-IN')}</span>
+          <span>Cash Collection:</span><span class="text-right font-bold text-emerald-700">₹${cash.toLocaleString('en-IN')}</span>
+          <span>UPI Online:</span><span class="text-right font-bold text-sky-700">₹${upi.toLocaleString('en-IN')}</span>
+          <span>Credit / Ledger:</span><span class="text-right font-bold text-amber-800">₹${credit.toLocaleString('en-IN')}</span>
+          <span>Cancelled Bills:</span><span class="text-right font-bold text-rose-700">${cancelled}</span>
+          <span>Returned Bills:</span><span class="text-right font-bold text-amber-800">${returned}</span>
+          <div class="col-span-2 border-t border-slate-300 my-1"></div>
+          <span class="font-bold text-slate-600">POS System Sales:</span><span class="text-right font-black text-slate-900">₹${posVal.toLocaleString('en-IN')}</span>
+          <span class="font-bold text-slate-600">Variance:</span><span class="text-right font-black ${diff < 0 ? 'text-rose-700' : 'text-emerald-700'}">${diff < 0 ? '-' : ''}₹${Math.abs(diff).toLocaleString('en-IN')}</span>
+          <span class="font-black text-slate-700">STATUS:</span><span class="text-right font-black uppercase text-amber-800">${statusStr}</span>
+        </div>
+      `;
+      slipContainer.classList.remove('hidden');
+    }
+
+    function escapeCSVField(str) {
+      if (str === null || str === undefined) return '""';
+      const stringValue = String(str);
+      if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('\r')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return `"${stringValue}"`;
+    }
+
+    function generateCSVContent() {
+      const deliveries = window.appState.allDeliveries;
+      const selectedDate = window.appState.selectedAdminDate || window.appState.currentDate;
+
+      const totalSales = deliveries.filter(d => d.status === 'Delivered').reduce((sum, d) => sum + d.amount, 0);
+      const cash = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'Cash').reduce((sum, d) => sum + d.amount, 0);
+      const upi = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'UPI').reduce((sum, d) => sum + d.amount, 0);
+      const credit = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'Credit').reduce((sum, d) => sum + d.amount, 0);
+      const cancelled = deliveries.filter(d => d.status === 'Cancelled').length;
+      const returned = deliveries.filter(d => d.status === 'Returned').length;
+      const pos = window.appState.posSales || 0;
+      const diff = totalSales - pos;
+
+      const lines = [];
+
+      lines.push([escapeCSVField("RAHIJ RAIDAN MANDI RESTAURANT - DELIVERY AUDIT REGISTER")].join(","));
+      lines.push([escapeCSVField("Report Date"), escapeCSVField(selectedDate)].join(","));
+      lines.push([escapeCSVField("Total Delivery Bills Recorded"), escapeCSVField(deliveries.length)].join(","));
+      lines.push([escapeCSVField("Total Delivery Sales (INR)"), escapeCSVField(totalSales)].join(","));
+      lines.push([escapeCSVField("Cash Collected"), escapeCSVField(cash)].join(","));
+      lines.push([escapeCSVField("UPI Payments"), escapeCSVField(upi)].join(","));
+      lines.push([escapeCSVField("Credit / Ledger"), escapeCSVField(credit)].join(","));
+      lines.push([escapeCSVField("Cancelled Bills"), escapeCSVField(cancelled)].join(","));
+      lines.push([escapeCSVField("Returned Bills"), escapeCSVField(returned)].join(","));
+      lines.push([escapeCSVField("POS Machine Delivery Sales"), escapeCSVField(pos)].join(","));
+      lines.push([escapeCSVField("Reconciliation Difference"), escapeCSVField(diff)].join(","));
+      lines.push([escapeCSVField("Status"), escapeCSVField(diff === 0 ? "MATCH" : (diff < 0 ? "SHORTAGE" : "EXCESS"))].join(","));
+      lines.push("");
+
+      lines.push([escapeCSVField("DELIVERY BOY PERFORMANCE SUMMARY")].join(","));
+      lines.push([
+        escapeCSVField("Delivery Boy"),
+        escapeCSVField("Total Bills"),
+        escapeCSVField("Cash (INR)"),
+        escapeCSVField("UPI (INR)"),
+        escapeCSVField("Credit (INR)"),
+        escapeCSVField("Delivered Total (INR)")
+      ].join(","));
+
+      const boyMap = {};
+      deliveries.forEach(d => {
+        if (!boyMap[d.boyName]) {
+          boyMap[d.boyName] = { name: d.boyName, bills: 0, cash: 0, upi: 0, credit: 0, total: 0 };
+        }
+        boyMap[d.boyName].bills++;
+        if (d.status === 'Delivered') {
+          boyMap[d.boyName].total += d.amount;
+          if (d.paymentMethod === 'Cash') boyMap[d.boyName].cash += d.amount;
+          if (d.paymentMethod === 'UPI') boyMap[d.boyName].upi += d.amount;
+          if (d.paymentMethod === 'Credit') boyMap[d.boyName].credit += d.amount;
+        }
+      });
+
+      Object.values(boyMap).forEach(b => {
+        lines.push([
+          escapeCSVField(b.name),
+          escapeCSVField(b.bills),
+          escapeCSVField(b.cash),
+          escapeCSVField(b.upi),
+          escapeCSVField(b.credit),
+          escapeCSVField(b.total)
+        ].join(","));
+      });
+
+      lines.push("");
+
+      lines.push([escapeCSVField("DETAILED INVOICE REGISTER")].join(","));
+      lines.push([
+        escapeCSVField("Date"),
+        escapeCSVField("Time"),
+        escapeCSVField("Invoice #"),
+        escapeCSVField("Delivery Boy"),
+        escapeCSVField("Amount (INR)"),
+        escapeCSVField("Payment Method"),
+        escapeCSVField("Status"),
+        escapeCSVField("Remarks")
+      ].join(","));
+
+      deliveries.forEach(d => {
+        lines.push([
+          escapeCSVField(d.date),
+          escapeCSVField(d.time),
+          escapeCSVField(d.invoiceNo),
+          escapeCSVField(d.boyName),
+          escapeCSVField(d.amount),
+          escapeCSVField(d.paymentMethod),
+          escapeCSVField(d.status),
+          escapeCSVField(d.remarks)
+        ].join(","));
+      });
+
+      return "\uFEFF" + lines.join("\r\n");
+    }
+
+    function downloadCSVReport() {
+      const deliveries = window.appState.allDeliveries;
+      if (deliveries.length === 0) {
+        showToast("No records available to export for this date.", 'warning');
+        return;
+      }
+
+      const csvData = generateCSVContent();
+      const dateStr = window.appState.selectedAdminDate || window.appState.currentDate;
+      const fileName = `Rahij_Raidan_Delivery_${dateStr}.csv`;
+
+      try {
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        
+        // Android and desktop download compatibility
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+          window.navigator.msSaveOrOpenBlob(blob, fileName);
+          showToast("CSV file exported successfully.", 'success');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.style.display = "none";
+        link.href = url;
+        link.setAttribute("download", fileName);
+        link.setAttribute("target", "_blank");
+
+        document.body.appendChild(link);
+        link.click();
+
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 500);
+
+        showToast("CSV download initiated.", 'success');
+      } catch (err) {
+        console.error("Direct download failed, opening preview fallback:", err);
+        openCSVPreviewModal();
+      }
+    }
+
+    function copyCSVToClipboard() {
+      const csvData = generateCSVContent();
+      
+      // Standard clipboard copy fallback (supports iframe restrictions)
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = csvData;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        textarea.style.top = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        showToast("CSV copied to clipboard! Paste into WhatsApp or Sheets.", 'success');
+      } catch (e) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(csvData).then(() => {
+            showToast("CSV copied to clipboard!", 'success');
+          }).catch(() => openCSVPreviewModal());
+        } else {
+          openCSVPreviewModal();
+        }
+      }
+    }
+
+    function openCSVPreviewModal() {
+      const csvData = generateCSVContent();
+      const textarea = document.getElementById('csvPreviewTextArea');
+      textarea.value = csvData;
+      document.getElementById('csvPreviewModal').classList.remove('hidden');
+    }
+
+    function closeCSVPreviewModal() {
+      document.getElementById('csvPreviewModal').classList.add('hidden');
+    }
+
+    function shareWhatsAppSummary() {
+      const deliveries = window.appState.allDeliveries;
+      const totalSales = deliveries.filter(d => d.status === 'Delivered').reduce((sum, d) => sum + d.amount, 0);
+      const cash = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'Cash').reduce((sum, d) => sum + d.amount, 0);
+      const upi = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'UPI').reduce((sum, d) => sum + d.amount, 0);
+      const credit = deliveries.filter(d => d.status === 'Delivered' && d.paymentMethod === 'Credit').reduce((sum, d) => sum + d.amount, 0);
+      const posVal = window.appState.posSales || 0;
+      const diff = totalSales - posVal;
+
+      let statusWord = "MATCH ✅";
+      if (diff < 0) statusWord = `SHORTAGE ⚠️ (₹${Math.abs(diff).toLocaleString('en-IN')})`;
+      else if (diff > 0) statusWord = `EXCESS 📈 (₹${diff.toLocaleString('en-IN')})`;
+
+      const boyMap = {};
+      deliveries.forEach(d => {
+        if (!boyMap[d.boyName]) boyMap[d.boyName] = { count: 0, sales: 0 };
+        boyMap[d.boyName].count++;
+        if (d.status === 'Delivered') boyMap[d.boyName].sales += d.amount;
+      });
+
+      let boyText = Object.values(boyMap)
+        .map(b => `• ${b.name}: ${b.count} bills | ₹${b.sales.toLocaleString('en-IN')}`)
+        .join('\n');
+
+      const text = `*RAHIJ RAIDAN MANDI RESTAURANT*
+*DAILY DELIVERY AUDIT REPORT*
+📅 *Date:* ${window.appState.selectedAdminDate}
+
+🧾 *Total Delivery Bills:* ${deliveries.length}
+💰 *Total Delivery Register:* ₹${totalSales.toLocaleString('en-IN')}
+💵 *Cash:* ₹${cash.toLocaleString('en-IN')}
+📱 *UPI:* ₹${upi.toLocaleString('en-IN')}
+📋 *Credit:* ₹${credit.toLocaleString('en-IN')}
+
+*Delivery Boy Totals:*
+${boyText || 'No bills'}
+
+📊 *POS Machine Sales:* ₹${posVal.toLocaleString('en-IN')}
+⚖️ *Difference:* ${diff < 0 ? '-' : ''}₹${Math.abs(diff).toLocaleString('en-IN')}
+📌 *Status:* ${statusWord}
+
+_Generated from Delivery Register App_`;
+
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+
+    function requestAdminAuth() {
+      if (window.appState.isAdminUnlocked) {
+        switchView('admin');
+        return;
+      }
+      document.getElementById('adminPinModal').classList.remove('hidden');
+      document.getElementById('adminPinInput').value = '';
+      document.getElementById('pinErrorMsg').classList.add('hidden');
+      setTimeout(() => {
+        document.getElementById('adminPinInput').focus();
+      }, 100);
+    }
+
+    function closeAdminPinModal() {
+      document.getElementById('adminPinModal').classList.add('hidden');
+      document.getElementById('adminPinInput').value = '';
+      document.getElementById('pinErrorMsg').classList.add('hidden');
+    }
+
+    function verifyAdminPin() {
+      const entered = document.getElementById('adminPinInput').value.trim();
+      // Strictly checked against PIN 7034
+      if (entered === "7034") {
+        window.appState.isAdminUnlocked = true;
+        closeAdminPinModal();
+        switchView('admin');
+        showToast("Admin Dashboard Unlocked", 'success');
+      } else {
+        playBeep('error');
+        document.getElementById('pinErrorMsg').classList.remove('hidden');
+        document.getElementById('adminPinInput').value = '';
+      }
+    }
+
+    function switchView(viewName) {
+      const deliveryView = document.getElementById('viewDeliveryBoy');
+      const adminView = document.getElementById('viewAdminDashboard');
+      const navDeliveryBtn = document.getElementById('navDeliveryBtn');
+      const navAdminBtn = document.getElementById('navAdminBtn');
+
+      if (viewName === 'delivery') {
+        deliveryView.classList.remove('hidden');
+        adminView.classList.add('hidden');
+
+        navDeliveryBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-amber-600 text-white shadow-sm";
+        navAdminBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-slate-700 hover:text-slate-950 transition-all";
+      } else {
+        deliveryView.classList.add('hidden');
+        adminView.classList.remove('hidden');
+
+        navAdminBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-amber-600 text-white shadow-sm";
+        navDeliveryBtn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-slate-700 hover:text-slate-950 transition-all";
+        
+        renderAdminDashboard();
+      }
+    }
+
+    async function changeAdminDate(newDate) {
+      if (!newDate) return;
+      window.appState.selectedAdminDate = newDate;
+      document.getElementById('adminDateSelector').value = newDate;
+      await loadFromStorage(newDate);
+    }
+
+    // Export functions to window
+    window.switchView = switchView;
+    window.requestAdminAuth = requestAdminAuth;
+    window.closeAdminPinModal = closeAdminPinModal;
+    window.verifyAdminPin = verifyAdminPin;
+    window.setDeliveryBoy = setDeliveryBoy;
+    window.handleStatusChange = handleStatusChange;
+    window.handleDeliverySubmit = handleDeliverySubmit;
+    window.calculateReconciliation = calculateReconciliation;
+    window.applyFilters = applyFilters;
+    window.toggleCloseDay = toggleCloseDay;
+    window.shareWhatsAppSummary = shareWhatsAppSummary;
+    window.downloadCSVReport = downloadCSVReport;
+    window.copyCSVToClipboard = copyCSVToClipboard;
+    window.openCSVPreviewModal = openCSVPreviewModal;
+    window.closeCSVPreviewModal = closeCSVPreviewModal;
+    window.changeAdminDate = changeAdminDate;
+
+    // Real-time clock update
+    setInterval(() => {
+      const clock = document.getElementById('liveTimeClock');
+      if (clock) {
+        const d = new Date();
+        clock.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      }
+    }, 1000);
+
+    // Initial launch on DOM load
+    window.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('adminDateSelector').value = window.appState.currentDate;
+      await openIndexedDB();
+      await loadFromStorage(window.appState.currentDate);
+    });
+  </script>
+</body>
+</html>
